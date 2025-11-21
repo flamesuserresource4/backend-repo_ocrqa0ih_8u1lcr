@@ -62,18 +62,10 @@ def test_database():
 
 # Utility to transform Mongo docs to safe JSON
 
-def to_jsonable(doc: dict):
+def serialize_doc(doc):
     d = dict(doc)
-    # id
     if "_id" in d:
         d["id"] = str(d.pop("_id"))
-    # date
-    if isinstance(d.get("date"), (date, datetime)):
-        d["date"] = d["date"].isoformat()
-    # timestamps
-    for key in ("created_at", "updated_at"):
-        if key in d and hasattr(d[key], "isoformat"):
-            d[key] = d[key].isoformat()
     return d
 
 
@@ -95,8 +87,10 @@ class LeaderboardRow(BaseModel):
 
 @app.post("/api/steps", response_model=dict)
 def add_steps(log: StepLog):
+    """Create a new step log for a user and date"""
     if db is None:
         raise HTTPException(status_code=500, detail="Database not configured")
+
     inserted_id = create_document("steplog", log)
     return {"id": inserted_id}
 
@@ -117,11 +111,12 @@ def list_steps(user: Optional[str] = None, start_date: Optional[date] = None, en
         query["date"] = {"$lte": end_date}
 
     docs = get_documents("steplog", query, limit)
-    return [StepEntryOut(**to_jsonable(d)) for d in docs]
+    return [serialize_doc(d) for d in docs]
 
 
 @app.get("/api/leaderboard", response_model=List[LeaderboardRow])
 def leaderboard(start_date: Optional[date] = None, end_date: Optional[date] = None, limit: int = 10):
+    """Aggregate total steps per user within date range"""
     if db is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
@@ -144,6 +139,7 @@ def leaderboard(start_date: Optional[date] = None, end_date: Optional[date] = No
     ]
 
     results = list(db["steplog"].aggregate(pipeline))
+    # Ensure types are JSON-compatible
     return [LeaderboardRow(user=r["user"], total_steps=int(r["total_steps"])) for r in results]
 
 

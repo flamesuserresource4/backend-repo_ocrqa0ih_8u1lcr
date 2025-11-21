@@ -13,36 +13,34 @@ Model name is converted to lowercase for the collection name:
 
 from pydantic import BaseModel, Field
 from typing import Optional
+from datetime import date as DateType
 
-# Example schemas (replace with your own):
+# Core app schemas
 
 class User(BaseModel):
     """
     Users collection schema
     Collection name: "user" (lowercase of class name)
     """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
+    name: str = Field(..., description="Display name")
+    email: Optional[str] = Field(None, description="Email address")
+    avatar_url: Optional[str] = Field(None, description="Profile avatar")
     is_active: bool = Field(True, description="Whether user is active")
 
+class StepLog(BaseModel):
+    """
+    Step logs per user per date
+    Collection name: "steplog"
+    """
+    user: str = Field(..., description="User display name")
+    steps: int = Field(..., ge=0, description="Number of steps for the entry")
+    date: DateType = Field(default_factory=DateType.today, description="Date of the steps (YYYY-MM-DD)")
+    note: Optional[str] = Field(None, description="Optional note for this entry")
+
+# Example schemas kept for reference (not used by the app)
 class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
     title: str = Field(..., description="Product title")
     description: Optional[str] = Field(None, description="Product description")
     price: float = Field(..., ge=0, description="Price in dollars")
     category: str = Field(..., description="Product category")
     in_stock: bool = Field(True, description="Whether product is in stock")
-
-# Add your own schemas here:
-# --------------------------------------------------
-
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
